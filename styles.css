@@ -1,4 +1,31 @@
-/* Sets all the text color to red! */
-body {
-    color: red;
+div.tag-view-container {
+	display: flex;
+	flex-flow: column;
+	max-height: 50%;
+}
+
+div.tag-view-info {
+	color: var(--text-muted);
+	padding-left: 1%;
+}
+
+div.tag-view-title {
+	color: var(--text-normal);
+	padding: 1%;
+	padding-bottom: 3%;
+	padding-top: 8%;
+}
+
+div.tag-view-container:first-child > .tag-view-title {
+    padding-top: 1%;
+}
+
+div.tag-list-container {
+	flex: 1;
+	overflow-y: auto;
+}
+
+div.tag-list-item {
+	color: var(--text-muted);
+	padding-left: 6%;
 }
