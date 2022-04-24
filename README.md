@@ -2,6 +2,8 @@
 
 A plugin for [Obsidian](https://obsidian.md/). It suggests tags for documents in your vault as you're editing them.
 
+Please note that this extension is largely untested - it will likely be a source of slow-down when opening large files, it may even freeze Obsidian. Always back up your notes.
+
 ## Use
 
 Open the tag suggestion window using the ribbon button. You should see a list of tags that match your document (taken from other documents in the vault), as well as the full list of tags that your document is not yet using.
