@@ -8,15 +8,16 @@ Open the tag suggestion window using the ribbon button. You should see a list of
 
 ## Installation
 
-Download this repo (top right -> "Code" -> "Download ZIP") and extract the zip it into `path/to/your/vault/.obsidian/plugins` so that you have, for example:
+Download `main.js`, `manifest.json`, and `styles.css` from [the latest release](https://github.com/a-wilkes/obsidian-tag-suggestion/releases) and put them into `path/to/your/vault/.obsidian/plugins/obsidian-tag-suggestion` (you will need to show hidden files and folders, and create any missing folders yourself) so that you have, for example:
 
 ```
 /path/to/vault/
 └── .obsidian
     └── plugins
         └── obsidian-tag-suggestion
-            ├── README.md
-            └── ...
+            ├── main.js
+            ├── manifest.json
+            └── styles.css
 ```
 
 Open Obsidian, go to settings, then "Community Plugins". Turn "Safe mode" to "OFF", then turn on the "Tag Suggestions" plugin in the list below (may require you to refresh the list or restart Obsidian before the plugin shows up).
