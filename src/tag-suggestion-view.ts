@@ -14,7 +14,7 @@ export default class TagSuggestionView extends View {
 
     private baseViewElement: Element = this.setViewElement();
 
-    private viewingFile: boolean = false;
+    private viewingFile = false;
     private suggestedTags: Tag[] = [];
     private unusedTags: Tag[] = [];
 

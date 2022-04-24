@@ -1,7 +1,7 @@
 import { CachedMetadata, getAllTags, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { RibbonConfig } from './tag-suggestion-ribbon';
 import TagSuggestionView, { TagSuggestionViewConfig } from './tag-suggestion-view';
-import TagSuggestionEngine, { TagExtractor } from './tag-suggestion-engine';
+import TagSuggestionEngine from './tag-suggestion-engine';
 import Tag from './tag';
 
 export default class TagSuggestionPlugin extends Plugin {
