@@ -16,17 +16,7 @@ Download this repo (top right -> "Code" -> "Download ZIP") and extract the zip i
     └── plugins
         └── obsidian-tag-suggestion
             ├── README.md
-            ├── esbuild.config.mjs
-            ├── main.js
-            ├── manifest.json
-            ├── node_modules
-            ├── package-lock.json
-            ├── package.json
-            ├── src
-            ├── styles.css
-            ├── tsconfig.json
-            ├── version-bump.mjs
-            └── versions.jso
+            └── ...
 ```
 
 Open Obsidian, go to settings, then "Community Plugins". Turn "Safe mode" to "OFF", then turn on the "Tag Suggestions" plugin in the list below (may require you to refresh the list or restart Obsidian before the plugin shows up).
