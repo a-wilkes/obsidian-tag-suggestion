@@ -1,5 +1,6 @@
 const TagConfig = {
     tagPrefix: "#",
+    closeMatchSensitivityMultiplier: 0.6,
 }
 
 export default class Tag {
@@ -31,25 +32,25 @@ export default class Tag {
 
     public isExactMatch(candidate: Tag): boolean {
         return this.match(
-            candidate,
+            [candidate],
             (thisTokens, candidateTokens) => thisTokens.every(token => candidateTokens.has(token))
         );
     }
 
-    public isCloseMatch(candidate: Tag): boolean {
+    public isCloseMatch(candidates: Tag[]): boolean {
         return this.match(
-            candidate,
+            candidates,
             (thisTokens, candidateTokens) => {
-                const sensitivity = candidateTokens.size / 2;
+                const sensitivity = thisTokens.length * TagConfig.closeMatchSensitivityMultiplier;
                 const matches = thisTokens.filter(token => candidateTokens.has(token));
                 return matches.length >= sensitivity;
             }
         );
     }
 
-    private match(candidate: Tag, scoreFn: (thisTokens: string[], candidateTokens: Set<string>) => boolean): boolean {
+    private match(candidates: Tag[], scoreFn: (thisTokens: string[], candidateTokens: Set<string>) => boolean): boolean {
         const thisTokens = Tag.tokenize(this.rawTag);
-        const candidateTokens = new Set(Tag.tokenize(candidate.getRawTag()));
+        const candidateTokens = new Set(candidates.flatMap(t => Tag.tokenize(t.getRawTag())));
 
         return scoreFn(thisTokens, candidateTokens);
     }

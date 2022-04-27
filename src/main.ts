@@ -8,7 +8,9 @@ export default class TagSuggestionPlugin extends Plugin {
 
     private engine: TagSuggestionEngine = new TagSuggestionEngine(
         this.extractTags.bind(this),
-        this.extractContent.bind(this)
+        this.extractContent.bind(this),
+        (tags) => this.updateViewTags(view => view.setUnusedTags(tags)),
+        (tags) => this.updateViewTags(view => view.setSuggestedTags(tags))
     );
 
     public override async onload(): Promise<void> {
@@ -52,8 +54,10 @@ export default class TagSuggestionPlugin extends Plugin {
             this.app.workspace.revealLeaf(leaf);
         }
 
-        this.engine.setGlobalTags(this.app.vault.getMarkdownFiles());
-        this.handleActiveLeafChanged();
+        this.engine.updateGlobalTags(
+            this.app.vault.getMarkdownFiles(),
+            this.handleActiveLeafChanged.bind(this)
+        );
     }
 
     private getTagSuggestSideBarLeaves(): WorkspaceLeaf[] {
@@ -71,42 +75,37 @@ export default class TagSuggestionPlugin extends Plugin {
         const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
         const isViewingFile: boolean = this.isViewingFile();
-        const unusedTags: Tag[] = this.engine.getUnusedTags(currentFile);
-        const suggestedTags: Tag[] = await this.engine.getSuggestedTags(currentFile);
-
-        this.getTagSuggestSideBarViews().forEach((view) => {
-            view?.setViewingFile(isViewingFile);
-            view?.setSuggestedTags(suggestedTags);
-            view?.setUnusedTags(unusedTags);
-        });
+        this.updateViewTags(view => view.setViewingFile(isViewingFile));
+        this.engine.updateUnusedTags(currentFile);
+        this.engine.updateSuggestedTags(currentFile);
     }
 
     private async handleFileChanged(): Promise<void> {
         const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
-        this.engine.setGlobalTags(this.app.vault.getMarkdownFiles());
-
-        const unusedTags: Tag[] = this.engine.getUnusedTags(currentFile);
-        const suggestedTags: Tag[] = await this.engine.getSuggestedTags(currentFile);
-
-        this.getTagSuggestSideBarViews().forEach((view) => {
-            view?.setSuggestedTags(suggestedTags);
-            view?.setUnusedTags(unusedTags);
-        });
+        this.engine.updateGlobalTags(
+            this.app.vault.getMarkdownFiles(),
+            async () => {
+                this.engine.updateUnusedTags(currentFile);
+                this.engine.updateSuggestedTags(currentFile);
+            }
+        );
     }
 
     private async handleFileDeleted(): Promise<void> {
         const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
-        this.engine.setGlobalTags(this.app.vault.getMarkdownFiles());
+        this.engine.updateGlobalTags(
+            this.app.vault.getMarkdownFiles(),
+            async () => {
+                this.engine.updateUnusedTags(currentFile);
+                this.engine.updateSuggestedTags(currentFile);
+            }
+        );
+    }
 
-        const unusedTags: Tag[] = this.engine.getUnusedTags(currentFile);
-        const suggestedTags: Tag[] = await this.engine.getSuggestedTags(currentFile);
-
-        this.getTagSuggestSideBarViews().forEach((view) => {
-            view?.setSuggestedTags(suggestedTags);
-            view?.setUnusedTags(unusedTags);
-        })
+    private updateViewTags(update: (view: TagSuggestionView) => void): void {
+        this.getTagSuggestSideBarViews().forEach(view => update(view));
     }
 
     private getTagSuggestSideBarViews(): TagSuggestionView[] {

@@ -1,13 +1,12 @@
-import fuzzysort from "fuzzysort";
 import { TFile } from "obsidian";
+import PausingWorker from "./pausing-worker";
 import Tag from "./tag";
 
 export type TagExtractor = (file: TFile) => Tag[];
 export type ContentExtractor = (file: TFile) => Promise<string>;
-export type TagMatcher = (file: TFile) => Promise<Tag[]>;
+export type TagSetter = (tags: Tag[]) => void;
 
 const TagSuggestionEngineConfig = {
-    fuzzy: true,
     maxSuggestions: 20,
 }
 
@@ -15,68 +14,78 @@ export default class TagSuggestionEngine {
 
     private extractTags: TagExtractor;
     private extractContent: ContentExtractor;
-    private matchTags: TagMatcher;
+
+    private setUnusedTags: TagSetter;
+    private setSuggestedTags: TagSetter;
 
     private globalTags: Tag[] = [];
 
-    public constructor(extractTags: TagExtractor, extractContent: ContentExtractor) {
+    public constructor(extractTags: TagExtractor,
+        extractContent: ContentExtractor,
+        setUnusedTags: TagSetter,
+        setSuggestedTags: TagSetter
+    ) {
         this.extractTags = extractTags;
         this.extractContent = extractContent;
-        this.matchTags = TagSuggestionEngineConfig.fuzzy ? this.getFuzzyTagMatches : this.getInflexibleTagMatches;
+        this.setUnusedTags = setUnusedTags;
+        this.setSuggestedTags = setSuggestedTags;
     }
 
-    public setGlobalTags(files: TFile[]): void {
-        this.globalTags = files.flatMap(file => this.extractTags(file));
-    }
+    public updateGlobalTags(files: TFile[], callback: () => void) {
+        this.globalTags = [];
 
-    public async getSuggestedTags(file: TFile | null): Promise<Tag[]> {
-        return file == null ? [] : this.matchTags(file);
-    }
-
-    public getUnusedTags(file: TFile | null): Tag[] {
-        return file == null
-            ? this.globalTags
-            : this.difference(this.globalTags, this.extractTags(file));
-    }
-
-    private difference(keep: Tag[], extract: Tag[]): Tag[] {
-        return keep.filter((toKeep) => {
-            return !extract.some((toRemove) => {
-                return toKeep.isExactMatch(toRemove);
-            });
-        });
-    }
-
-    private async getFuzzyTagMatches(file: TFile): Promise<Tag[]> {
-        const fileContent = await this.getFileContentAndName(file);
-        const preparedContent = fuzzysort.prepare(fileContent);
-
-        const matches = await this.getInflexibleTagMatches(file);
-
-        this.getUnusedTags(file)
-            .map((tag) => {
-                return {
-                    tag: tag,
-                    score: fuzzysort.single(tag.getRawTag(), preparedContent)?.score ?? -Infinity
+        const tagFilter = new PausingWorker(
+            (tag: Tag) => {
+                if (!this.globalTags.some(t => t.isExactMatch(tag))) {
+                    this.globalTags.push(tag);
                 }
-            })
-            .filter(res => res.score > -Infinity)
-            .sort((a, b) => a.score - b.score)
-            .forEach(res => {
-                if (!matches.contains(res.tag)) {
-                    matches.push(res.tag);
-                }
-            });
+            },
+            callback
+        );
 
-        return matches.slice(0, TagSuggestionEngineConfig.maxSuggestions);
+        new PausingWorker(
+            (file: TFile) => this.extractTags(file),
+            (tags) => tagFilter.process(tags.flatMap(t => t))
+        ).process(files);
     }
 
-    private async getInflexibleTagMatches(file: TFile): Promise<Tag[]> {
-        const unusedTags: Tag[] = this.getUnusedTags(file);
-        const fileTokens: Tag[] = await this.getFileTokens(file);
+    public async updateSuggestedTags(file: TFile | null): Promise<void> {
+        this.setSuggestedTags([]);
+        file == null
+            ? this.setSuggestedTags([])
+            : await this.getTagMatches(file, this.setSuggestedTags);
+    }
 
-        return this.intersection(unusedTags, fileTokens)
-            .slice(0, TagSuggestionEngineConfig.maxSuggestions);
+    public updateUnusedTags(file: TFile | null): void {
+        this.setUnusedTags([]);
+        this.getUnusedTags(file, this.setUnusedTags);
+    }
+
+    private getUnusedTags(file: TFile | null, setTags: TagSetter): void {
+        file == null
+            ? setTags(this.globalTags)
+            : this.difference(this.globalTags, this.extractTags(file), setTags)
+    }
+
+    private difference(keep: Tag[], extract: Tag[], setTags: TagSetter): void {
+        new PausingWorker(
+            (toKeep: Tag) => extract.some(toRemove => toKeep.isExactMatch(toRemove)) ? null : toKeep,
+            (results) => setTags(results.filter(t => t != null) as Tag[])
+        ).process(keep);
+    }
+
+    private async getTagMatches(file: TFile, setTags: TagSetter): Promise<void> {
+        this.getUnusedTags(
+            file,
+            async (unusedTags) => {
+                const fileTokens: Tag[] = await this.getFileTokens(file);
+
+                new PausingWorker(
+                    (unusedTag: Tag) => unusedTag.isCloseMatch(fileTokens) ? unusedTag : null,
+                    (matches) => setTags(matches.filter(t => t != null) as Tag[])
+                ).process(unusedTags);
+            }
+        );
     }
 
     private async getFileTokens(file: TFile): Promise<Tag[]> {
@@ -87,13 +96,5 @@ export default class TagSuggestionEngine {
 
     private async getFileContentAndName(file: TFile): Promise<string> {
         return file.basename + " " + await this.extractContent(file);
-    }
-
-    private intersection(s1: Tag[], s2: Tag[]): Tag[] {
-        return s1.filter((e1) => {
-            return s2.some((e2) => {
-                return e1.isCloseMatch(e2);
-            });
-        });
     }
 }

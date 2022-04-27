@@ -93,12 +93,16 @@ export default class TagSuggestionView extends View {
 
     private createList(elements: string[]): Element {
         const container: Element = createDiv({ cls: "tag-list-container" });
-        elements.forEach((tag) => {
-            container.createDiv({
-                cls: "tag-list-item",
-                text: tag,
-            })
-        });
+        if (elements.length == 0) {
+            container.createDiv({ cls: "tag-list-item", text: "No tags to show" });
+        } else {
+            elements.forEach((tag) => {
+                container.createDiv({
+                    cls: "tag-list-item",
+                    text: tag,
+                })
+            });
+        }
 
         return container;
     }
